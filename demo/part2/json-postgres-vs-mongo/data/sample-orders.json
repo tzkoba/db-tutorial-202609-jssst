@@ -1,0 +1,80 @@
+[
+  {
+    "order_id": "ORD-1001",
+    "status": "paid",
+    "customer": {
+      "name": "Sato Hanako",
+      "email": "sato@example.com",
+      "tier": "gold"
+    },
+    "items": [
+      {
+        "sku": "BOOK-1",
+        "title": "Database Intro",
+        "qty": 1,
+        "price": 3200
+      },
+      {
+        "sku": "BOOK-2",
+        "title": "NoSQL Guide",
+        "qty": 2,
+        "price": 2800
+      }
+    ],
+    "tags": ["online", "priority"],
+    "meta": {
+      "channel": "web",
+      "coupon": "WELCOME10"
+    }
+  },
+  {
+    "order_id": "ORD-1002",
+    "status": "shipped",
+    "customer": {
+      "name": "Suzuki Taro",
+      "email": "suzuki@example.com",
+      "tier": "silver"
+    },
+    "items": [
+      {
+        "sku": "BOOK-2",
+        "title": "NoSQL Guide",
+        "qty": 1,
+        "price": 2800
+      }
+    ],
+    "tags": ["store"],
+    "meta": {
+      "channel": "pos",
+      "coupon": null
+    }
+  },
+  {
+    "order_id": "ORD-1003",
+    "status": "paid",
+    "customer": {
+      "name": "Tanaka Yuki",
+      "email": "tanaka@example.com",
+      "tier": "gold"
+    },
+    "items": [
+      {
+        "sku": "BOOK-1",
+        "title": "Database Intro",
+        "qty": 3,
+        "price": 3200
+      },
+      {
+        "sku": "ACC-9",
+        "title": "Bookmark Set",
+        "qty": 1,
+        "price": 500
+      }
+    ],
+    "tags": ["online", "gift"],
+    "meta": {
+      "channel": "mobile",
+      "coupon": null
+    }
+  }
+]
