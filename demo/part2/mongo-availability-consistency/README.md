@@ -101,7 +101,7 @@ rs.status()
 **見せること**: `rs.status()` で PRIMARY 1 + SECONDARY 2。`health: 1`。
 
 ```bash
-./scripts/02-init-replset.sh
+./scripts/02-init-replicaset.sh
 ```
 
 ---
@@ -120,7 +120,7 @@ db.getSiblingDB('demo').orders.insertOne(
 **見せること**: `acknowledged: true` と `_id`。3 台とも生きているので多数派書き込みが通る。
 
 ```bash
-./scripts/03-write-majority.sh
+./scripts/03-baseline.sh
 ```
 
 ---
@@ -159,7 +159,7 @@ PostgreSQL の同期レプリカ切断（`postgres-availability` Phase 3.5）と
 Postgres は同期スタンバイが消えるとプライマリのコミットが止まる。MongoDB は多数派が残れば書き込みを継続し、少数派側だけが止まる。
 
 ```bash
-./scripts/03.5-network-partition.sh
+./scripts/03b-partition-demo.sh
 ```
 
 ---
@@ -204,7 +204,7 @@ db.getSiblingDB('demo').orders.countDocuments(
 `w: 1` は PRIMARY のメモリ反映だけで成功を返す。SECONDARY へ届く前に PRIMARY を `KILL` すると、その分は新しい PRIMARY 側に無い。
 
 ```bash
-./scripts/04-failover-w1.sh
+./scripts/04-w1-loss-demo.sh
 ```
 
 スクリプトは起動時に `docker start mongo1 mongo2 mongo3` で 3 台を起こしてから書き込む。
@@ -254,7 +254,7 @@ db.getSiblingDB('demo').orders.countDocuments(
 （新しい PRIMARY 1 台だけを読むと、選出直後に majority 読みが追いつかず、誤って Missing に見えることがある。）
 
 ```bash
-./scripts/05-failover-majority.sh
+./scripts/05-majority-contrast.sh
 ```
 
 Phase 4 と同様、起動時に 3 台を `docker start` してから書き込む。
@@ -264,7 +264,7 @@ Phase 4 と同様、起動時に 3 台を `docker start` してから書き込�
 ## 後始末
 
 ```bash
-./scripts/99-cleanup.sh
+./scripts/cleanup.sh
 ```
 
 `mongo1` / `mongo2` / `mongo3` を stop / rm する。ボリュームは使っていないので、コンテナ削除でデータも消える。

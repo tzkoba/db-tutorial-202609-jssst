@@ -4,8 +4,6 @@
 
 **Docker Compose YAML は用意していません。** 本デモは段階理解のため `docker run` と各 Phase 用シェルスクリプト（`scripts/`）で構成しています。
 
-詳細手順は [outline/detail/20260907_JSSST_detail_part1_rdb.md](../../../outline/detail/20260907_JSSST_detail_part1_rdb.md) の「デモ > 信頼性・耐久性」も参照。
-
 ## 構成
 
 | 要素 | 値 |

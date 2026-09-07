@@ -4,8 +4,6 @@
 
 **Docker Compose YAML は用意していません。** 既存デモと同様、`docker run` と Phase 用スクリプトで進めます。
 
-詳細は [outline/detail/20260907_JSSST_detail_part1_rdb.md](../../../outline/detail/20260907_JSSST_detail_part1_rdb.md) / [part2](../../../outline/detail/20260907_JSSST_detail_part2_nosql.md) の機能要件・デモ節も参照。
-
 ## 構成
 
 | 要素 | 値 |

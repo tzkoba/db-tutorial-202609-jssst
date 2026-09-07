@@ -6,8 +6,6 @@ Part2 MongoDB デモ（`w:1` + `readConcern: local` の欠落 vs `w:majority` + 
 
 **Docker Compose YAML は用意していません。** PostgreSQL / Mongo デモと同様、`docker run` と Phase 用スクリプトで段階的に進めます。
 
-詳細は [outline/detail/20260907_JSSST_detail_part3_newsql.md](../../../outline/detail/20260907_JSSST_detail_part3_newsql.md) の Part3「(d) デモ」も参照。
-
 ## 前提
 
 - Docker が利用可能であること（3 ノードで空きメモリ目安 5.5GB+）
