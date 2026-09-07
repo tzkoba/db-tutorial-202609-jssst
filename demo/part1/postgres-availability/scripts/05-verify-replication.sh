@@ -17,6 +17,20 @@ if ! docker ps --format '{{.Names}}' | grep -qx "${PG_STANDBY}"; then
   exit 1
 fi
 
+sync_state="$(docker exec "${PG_PRIMARY}" psql -U "${PG_SUPERUSER}" -d postgres -Atqc \
+  "SELECT COALESCE(sync_state, '') FROM pg_stat_replication LIMIT 1;" | tr -d '\r')"
+if [[ "${sync_state}" != "sync" ]]; then
+  echo "Standby is not synchronous (sync_state='${sync_state}'). Run 04b-enable-sync.sh first."
+  exit 1
+fi
+
+echo "Primary sync settings:"
+demo_psql "${PG_PRIMARY}" <<'SQL'
+SHOW synchronous_commit;
+SHOW synchronous_standby_names;
+SELECT pid, application_name, state, sync_state FROM pg_stat_replication;
+SQL
+
 echo "Inserting row on primary..."
 demo_psql "${PG_PRIMARY}" "INSERT INTO demo_items (name) VALUES ('after_replication');"
 

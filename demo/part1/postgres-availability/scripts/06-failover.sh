@@ -25,8 +25,10 @@ until docker exec "${PG_STANDBY}" psql -U "${PG_SUPERUSER}" -d postgres -Atqc "S
   sleep 1
 done
 
-echo "Inserting row on promoted standby..."
+echo "Promoted node has no synchronous_standby_names (set on old primary only)."
+echo "Old primary stays down: single-node degraded operation."
 demo_psql "${PG_STANDBY}" <<'SQL'
+SHOW synchronous_standby_names;
 INSERT INTO demo_items (name) VALUES ('after_failover');
 SELECT * FROM demo_items ORDER BY id;
 SQL

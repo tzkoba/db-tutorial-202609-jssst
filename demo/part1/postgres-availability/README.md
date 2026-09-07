@@ -15,6 +15,7 @@
 | 管理ユーザ | `postgres` / `postgres` |
 | レプリケーション ユーザ | `replicator` / `replicator` |
 | Replication slot | `standby_slot` |
+| 同期（Phase 4.5 以降、primary のみ） | `synchronous_commit=on` / `synchronous_standby_names='*'` |
 
 ```mermaid
 flowchart LR
@@ -194,13 +195,39 @@ SELECT status, written_lsn, flushed_lsn, latest_end_lsn
 FROM pg_stat_wal_receiver;
 ```
 
-**見せること**: WAL ストリームが張られ、standby が primary を追従開始。
+**見せること**: WAL ストリームが張られ、standby が primary を追従開始。この時点の `sync_state` はまだ `async`。
 
 ```bash
 ./scripts/04-start-standby.sh
 ```
 
+## Phase 4.5: 同期レプリケーションの有効化
+
+**目的**: standby が接続したあと、**primary だけ** を同期にする。`synchronous_commit=on` なので、COMMIT は standby へ WAL が flush されるまで戻らない。
+
+standby 側の設定は変えない（`pg_basebackup` 時点の `postgresql.auto.conf` のまま）。Phase 6 の縮退運用で、昇格後の COMMIT が同期先待ちで止まらないようにするため。
+
+```sql
+-- primary のみ
+ALTER SYSTEM SET synchronous_commit TO 'on';
+ALTER SYSTEM SET synchronous_standby_names TO '*';
+SELECT pg_reload_conf();
+
+SHOW synchronous_commit;
+SHOW synchronous_standby_names;
+SELECT pid, usename, application_name, state, sync_state
+FROM pg_stat_replication;
+```
+
+**見せること**: `sync_state = sync`。`synchronous_commit` が `on`。
+
+```bash
+./scripts/04b-enable-sync.sh
+```
+
 ## Phase 5: 複製と Hot Standby の確認
+
+**目的**: 同期 COMMIT 後に standby で同じ行が読めることと、standby が書き込み拒否することを確認する。
 
 Primary に書き込み:
 
@@ -229,7 +256,7 @@ SELECT pg_current_wal_lsn();
 SELECT pg_last_wal_replay_lsn();
 ```
 
-**見せること**: データ反映と Hot Standby での SELECT を実演完了。
+**見せること**: COMMIT が戻った時点で standby に WAL が flush 済み。Hot Standby の SELECT と、standby への INSERT 拒否。
 
 ```bash
 ./scripts/05-verify-replication.sh
@@ -237,7 +264,9 @@ SELECT pg_last_wal_replay_lsn();
 
 ## Phase 6: Failover デモ
 
-1. プライマリ停止:
+**目的**: primary 停止後に standby を昇格し、**元 primary は起動せず 1 台で縮退運用**する。同期設定は旧 primary にしか無いので、昇格後の INSERT は止まらない。
+
+1. プライマリ停止（このあと起動しない）:
 
 ```bash
 docker stop pg-primary
@@ -254,11 +283,12 @@ SELECT pg_promote();
 
 ```sql
 SELECT pg_is_in_recovery();  -- false
+SHOW synchronous_standby_names;  -- 空（同期設定は旧 primary のみ）
 INSERT INTO demo_items (name) VALUES ('after_failover');
 SELECT * FROM demo_items ORDER BY id;
 ```
 
-**見せること**: プライマリ障害後も standby 昇格で書き込みを継続できる。
+**見せること**: 昇格後は 1 台でも書き込みを継続できる。同期スタンバイ切断による COMMIT 待ちは、このデモでは再現しない。
 
 ```bash
 ./scripts/06-failover.sh
@@ -280,6 +310,7 @@ SELECT * FROM demo_items ORDER BY id;
 6. **ポート**: primary `5432` / standby `5433` を明示する
 7. **standby.signal**: 手動設定する場合は `primary_conninfo` も必要（`-R` 推奨）
 8. **pg_stat_wal_receiver**: PostgreSQL 13 以降は `received_lsn` が無く、`written_lsn` / `flushed_lsn` を使う
+9. **同期設定は primary のみ**: Phase 4.5 の `ALTER SYSTEM` を standby にコピーしない。Phase 5 の前に `04b-enable-sync.sh` が必要
 
 ## デモ時間の目安
 
@@ -288,6 +319,7 @@ SELECT * FROM demo_items ORDER BY id;
 | 1 | Primary 起動 | 3–5 分 |
 | 2 | Primary 設定 | 5–8 分 |
 | 3–4 | pg_basebackup + standby 起動 | 5–10 分 |
+| 4.5 | 同期レプリケーション有効化 | 2–3 分 |
 | 5 | 動作確認 | 3–5 分 |
 | 6 | Failover（任意） | 5 分 |
 
