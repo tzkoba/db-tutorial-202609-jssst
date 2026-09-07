@@ -135,7 +135,7 @@ docker restart pg-primary
 SELECT pg_create_physical_replication_slot('standby_slot');
 ```
 
-**見せること**: primary はまだ 1 台だが、レプリケーション待ち受け状態になった。
+**見せること**: primary はまだ 1 台だが、レプリケーション待ち受け状態になった。`ALTER SYSTEM` は volume 上の `postgresql.auto.conf` に残るので、このあとの `docker restart` でも設定は戻らない。
 
 ```bash
 ./scripts/02-configure-primary.sh
@@ -219,7 +219,7 @@ SELECT pid, usename, application_name, state, sync_state
 FROM pg_stat_replication;
 ```
 
-**見せること**: `sync_state = sync`。`synchronous_commit` が `on`。
+**見せること**: `sync_state = sync`。`synchronous_commit` が `on`。この変更も primary の `postgresql.auto.conf` に残る（コンテナ再起動では消えない。volume 削除で消える）。
 
 ```bash
 ./scripts/04b-enable-sync.sh
@@ -311,6 +311,7 @@ SELECT * FROM demo_items ORDER BY id;
 7. **standby.signal**: 手動設定する場合は `primary_conninfo` も必要（`-R` 推奨）
 8. **pg_stat_wal_receiver**: PostgreSQL 13 以降は `received_lsn` が無く、`written_lsn` / `flushed_lsn` を使う
 9. **同期設定は primary のみ**: Phase 4.5 の `ALTER SYSTEM` を standby にコピーしない。Phase 5 の前に `04b-enable-sync.sh` が必要
+10. **ALTER SYSTEM は volume に残る**: `postgresql.auto.conf`（データディレクトリ）へ書く。このデモは `pg-primary-data` 等を mount しているので、`docker restart` やコンテナ再作成でも **volume が残れば設定は消えない**。戻るのは `cleanup.sh` で volume を消したとき。反映に restart が必要な項目（`wal_level` 等）と、reload で足りる項目（`synchronous_standby_names` 等）は別問題
 
 ## デモ時間の目安
 
