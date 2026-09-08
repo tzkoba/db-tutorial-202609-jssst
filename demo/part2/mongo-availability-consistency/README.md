@@ -243,8 +243,8 @@ db.getSiblingDB('demo').orders.countDocuments(
 | MISSING | `ACKED - FOUND`（0 でも 1 以上でもあり得る。下の説明） |
 
 - `ACKED = FOUND + MISSING`
-- **MISSING = 0 のとき**: 残ノードの majority スナップショットが追いついている。`w: majority` で成功した行が、majority 読みでも見える（このデモの主メッセージ）。
-- **MISSING ≥ 1 のとき**: acked な行が消えた、ではない。PRIMARY 停止直後は、残ノードの `readConcern: majority` が見る確定スナップショットがまだ古いことがある。local にはあっても majority 読みでは未検出。書き込み自体は majority 確定済み。読みの断面が後追いになる（見かけ上 eventual）。Phase 4 の Missing（複製前に PRIMARY が落ちた本物の欠落）とは意味が違う。スクリプトは同じ ACKED 集合を **10 秒後にもう一度だけ** majority 読みする。2 回目で 0 になればスナップショットが追いついた印。残ってもその回は仕方なし（Phase 5 全体のやり直しはしない）。
+- **MISSING = 0 のとき**: 生存ノードのレプリケーションラグが閉じ、majority の確定点が追いついている。`w: majority` で成功した行が、majority 読みでも見える（このデモの主メッセージ）。
+- **MISSING ≥ 1 のとき**: acked な行が消えた、ではない。`w: majority` は 3 台中 2 台で足りるので、COMMIT に使われなかった SECONDARY には **レプリケーションラグ** が残り得る。PRIMARY 障害後、そのノードは新 PRIMARY から oplog 追従を付け直す。生きている 2 台がその行を持つまで確定点は進まないので、majority 読みでは未検出（持っている側の local にあっても）。どちらか一方で見えれば FOUND。両方で見えなければ Missing。10 秒後の再読みは「ラグ＋付け直しが閉じる目安」であり、障害前から 10 秒以上遅れていた、という意味ではない。2 回目で 0 なら追いついた印。残ってもその回は仕方なし（Phase 5 全体のやり直しはしない）。Phase 4 の Missing（複製前に PRIMARY が落ちた本物の欠落）とは意味が違う。
 
 `w: majority` は多数派（PRIMARY + SECONDARY のうち 2 台）への複製完了を待ってから成功を返す。
 その後に PRIMARY を落としても、残った SECONDARY 側にデータがある。
@@ -274,5 +274,5 @@ Phase 4 と同様、起動時に 3 台を `docker start` してから書き込�
 - **PRIMARY がすぐ決まらない**: Phase 2 のあとに数秒待つ。`rs.status()` で `stateStr` を見る。
 - **ホスト名 `mongo1` が解決できない**: replica set の member はコンテナホスト名。クライアントは `docker exec` で各コンテナに入る。
 - **Phase 4 で Missing が 0**: `w: 1` でも複製が間に合うことがある。そのときは「運が良かった」と説明し、再実行するか件数を増やす。
-- **Phase 5 で Missing > 0**: 消えたのではなく、majority 読みの断面が未更新なことが多い。スクリプトは 10 秒後に同じ ACKED 集合を majority 読みし直す（1 回だけ）。それでも残ればその回は仕方なし。Phase 4 の欠落とは別。
+- **Phase 5 で Missing > 0**: 消えたのではなく、majority に入らなかった SECONDARY のレプリケーションラグ（＋選挙後の追従付け直し）で確定点がまだ古いことが多い。スクリプトは 10 秒後に同じ ACKED 集合を majority 読みし直す（1 回だけ）。それでも残ればその回は仕方なし。障害前ラグが必ず 10 秒以上だった、という意味ではない。Phase 4 の欠落とは別。
 - **ポート衝突**: 27021-27023 が空いていること。
