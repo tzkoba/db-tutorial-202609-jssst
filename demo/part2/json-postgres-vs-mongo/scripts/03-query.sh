@@ -106,4 +106,4 @@ cat <<'EOF'
 | 学習コスト | SQL + jsonb 演算子の両方 | ドキュメントフィルタに統一 |
 EOF
 
-echo "Phase 3 complete."
+echo "Phase 3 完了。"

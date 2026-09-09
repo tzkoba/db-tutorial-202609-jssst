@@ -7,18 +7,18 @@ source "${SCRIPT_DIR}/common.env"
 # shellcheck source=lib.sh
 source "${SCRIPT_DIR}/lib.sh"
 
-echo "=== Phase 3: Baseline (healthy cluster INSERT) ==="
+echo "=== Phase 3: ベースライン（健全クラスタへの INSERT） ==="
 
 node="$(wait_for_writable_endpoint)"
-echo "Writable endpoint: ${node}"
+echo "書き込み可能なエンドポイント: ${node}"
 
 demo_ysql "${node}" \
   "INSERT INTO ${YB_TABLE}(tag, client_id, n, payload) VALUES ('baseline', 0, 0, 'healthy') RETURNING id, tag;"
 
 count="$(count_rows "${node}" "tag = 'baseline'")"
-echo "baseline row count: ${count}"
+echo "baseline の行数: ${count}"
 
 leader="$(find_tablet_leader_container)"
-echo "Current tablet Leader (best-effort): ${leader}"
+echo "現在の tablet Leader（best-effort）: ${leader}"
 
-echo "Phase 3 complete."
+echo "Phase 3 完了。"

@@ -9,15 +9,15 @@ docker rm -f "${PG_PITR_CONTAINER}" 2>/dev/null || true
 docker rm -f "${PG_CONTAINER}" 2>/dev/null || true
 rm -f "${SCRIPT_DIR}/.recovery_target_time"
 
-read -r -p "Remove volumes (${PG_DATA_VOLUME}, ${PG_PITR_DATA_VOLUME}, ${PG_ARCHIVE_VOLUME}, ${PG_BACKUP_VOLUME})? [y/N] " answer
+read -r -p "ボリューム（${PG_DATA_VOLUME}, ${PG_PITR_DATA_VOLUME}, ${PG_ARCHIVE_VOLUME}, ${PG_BACKUP_VOLUME}）を削除しますか？ [y/N] " answer
 if [[ "${answer}" =~ ^[Yy]$ ]]; then
   docker volume rm "${PG_DATA_VOLUME}" 2>/dev/null || true
   docker volume rm "${PG_PITR_DATA_VOLUME}" 2>/dev/null || true
   docker volume rm "${PG_ARCHIVE_VOLUME}" 2>/dev/null || true
   docker volume rm "${PG_BACKUP_VOLUME}" 2>/dev/null || true
-  echo "Volumes removed."
+  echo "ボリュームを削除しました。"
 else
-  echo "Volumes kept."
+  echo "ボリュームは残しました。"
 fi
 
-echo "Cleanup complete."
+echo "クリーンアップ完了。"

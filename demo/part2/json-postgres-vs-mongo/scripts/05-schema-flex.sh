@@ -74,4 +74,4 @@ cat <<'EOF'
   一方、結合・制約・既存 SQL 資産と混ぜるなら PostgreSQL 側が有利、という使い分けが見える。
 EOF
 
-echo "Phase 5 complete."
+echo "Phase 5 完了。"

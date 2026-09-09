@@ -6,7 +6,7 @@ wait_for_postgres() {
   local i
   for i in $(seq 1 "${seconds}"); do
     if ! docker ps --format '{{.Names}}' | grep -qx "${name}"; then
-      echo "Container ${name} is not running. Logs:" >&2
+      echo "コンテナ ${name} が動いていません。ログ:" >&2
       docker logs "${name}" >&2 || true
       return 1
     fi
@@ -15,7 +15,7 @@ wait_for_postgres() {
     fi
     sleep 1
   done
-  echo "Timed out waiting for ${name}. Logs:" >&2
+  echo "${name} の起動待ちがタイムアウトしました。ログ:" >&2
   docker logs "${name}" >&2 || true
   return 1
 }

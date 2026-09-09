@@ -11,81 +11,81 @@ source "${SCRIPT_DIR}/lib.sh"
 for name in "${MONGO1}" "${MONGO2}" "${MONGO3}"; do
   if docker ps -a --format '{{.Names}}' | grep -qx "${name}"; then
     if ! docker ps --format '{{.Names}}' | grep -qx "${name}"; then
-      echo "Restarting ${name}..."
+      echo "${name} を再起動しています…"
       demo_run docker start "${name}"
     fi
   else
-    echo "Missing container ${name}. Re-run from 01-start-nodes.sh."
+    echo "コンテナ ${name} が見つかりません。01-start-nodes.sh からやり直してください。"
     exit 1
   fi
 done
 
-echo "Waiting for Replica Set to heal..."
+echo "Replica Set の回復を待っています…"
 sleep 8
 primary="$(wait_for_primary)"
-echo "Current PRIMARY: ${primary}"
+echo "現在の PRIMARY: ${primary}"
 
 SUCCESS_FILE="${RUN_DIR}/success-majority.txt"
 MISSING_FILE="${RUN_DIR}/missing-majority.txt"
 : > "${SUCCESS_FILE}"
 : > "${MISSING_FILE}"
 
-echo "=== Phase 5: w:majority writers + kill PRIMARY ==="
+echo "=== Phase 5: w:majority 書き込み + PRIMARY を kill ==="
 run_insert_clients "'majority'" "${SUCCESS_FILE}" 3 25
 sleep 3
 
 primary="$(wait_for_primary)"
-echo "Killing PRIMARY ${primary} with SIGKILL..."
+echo "PRIMARY ${primary} を SIGKILL で止めます…"
 demo_run docker kill -s KILL "${primary}"
 
 wait_clients
 
-echo "Waiting for new PRIMARY..."
+echo "新しい PRIMARY を待っています…"
 new_primary="$(wait_for_primary)"
-echo "New PRIMARY: ${new_primary}"
-echo "Waiting for a SECONDARY to appear beside the new PRIMARY..."
+echo "新しい PRIMARY: ${new_primary}"
+echo "新しい PRIMARY の横に SECONDARY が出るまで待っています…"
 wait_for_secondary_member "${new_primary}" || true
 
 # w:majority means another surviving node already has the write. Checking only
 # the new PRIMARY can look like a loss if that node has not applied it yet.
-echo "Checking acked _ids on surviving replicas with readConcern majority..."
+echo "生存レプリカ上で acked な _id を readConcern majority で確認しています…"
 run_acked_id_scan_survivors "${SUCCESS_FILE}" "${MISSING_FILE}" "majority"
 success_count="${scan_acked}"
 found="${scan_found}"
 missing="${scan_missing}"
 sample_found="${scan_sample_found}"
-echo "Client-acked inserts (w:majority): ${success_count}"
+echo "ACKED（w:majority で成功）: ${success_count}"
 
-echo "Found on a surviving replica (readConcern majority): ${found}"
-echo "Missing among acked w:majority writes: ${missing}"
+echo "FOUND（生存レプリカ、readConcern majority）: ${found}"
+echo "MISSING（acked な w:majority 書き込みのうち）: ${missing}"
 if [[ -n "${sample_found}" ]]; then
   show_one_id_check "${new_primary}" "${sample_found}" "majority"
 fi
 
 # One extra majority read of the same acked _ids. First-half waits stay as-is.
 if [[ "${success_count}" -gt 0 && "${missing}" -gt 0 ]]; then
-  echo "Missing > 0 after first majority read; waiting 10s for the committed snapshot, then reading once more..."
+  echo "最初の majority 読みで MISSING > 0。committed snapshot 待ちで 10 秒おき、もう一度読みます…"
   sleep 10
-  echo "Checking acked _ids again (same set, readConcern majority)..."
+  echo "同じ _id 集合を readConcern majority で再確認しています…"
   run_acked_id_scan_survivors "${SUCCESS_FILE}" "${MISSING_FILE}" "majority"
   success_count="${scan_acked}"
   found="${scan_found}"
   missing="${scan_missing}"
   sample_found="${scan_sample_found}"
-  echo "Client-acked inserts (w:majority): ${success_count}"
-  echo "Found on a surviving replica after 10s (readConcern majority): ${found}"
-  echo "Missing among acked w:majority writes after 10s: ${missing}"
+  echo "ACKED（w:majority で成功）: ${success_count}"
+  echo "FOUND（10 秒後の生存レプリカ、readConcern majority）: ${found}"
+  echo "MISSING（10 秒後の acked な w:majority 書き込みのうち）: ${missing}"
   if [[ -n "${sample_found}" ]]; then
     show_one_id_check "${new_primary}" "${sample_found}" "majority"
   fi
 fi
 
 if [[ "${missing}" -eq 0 && "${success_count}" -gt 0 ]]; then
-  echo "As expected: acked w:majority writes survived failover."
+  echo "想定どおり: acked な w:majority 書き込みはフェイルオーバー後も残った。"
 elif [[ "${success_count}" -eq 0 ]]; then
-  echo "No acked majority writes (all failed/timed out during failover). That is also an expected contrast to w:1."
+  echo "acked な majority 書き込みなし（フェイルオーバー中に失敗／タイムアウト）。w:1 との対比としてはこれも想定内。"
 else
-  echo "Missing still > 0 after one 10s majority reread; snapshot may not have caught up. Acceptable for this demo."
+  echo "10 秒後の majority 再読みでも MISSING > 0。snapshot が追いついていない可能性。このデモでは許容。"
 fi
 
-echo "Phase 5 complete."
+echo "Phase 5 完了。"

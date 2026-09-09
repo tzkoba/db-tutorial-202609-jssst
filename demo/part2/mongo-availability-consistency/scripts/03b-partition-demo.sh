@@ -7,23 +7,23 @@ source "${SCRIPT_DIR}/common.env"
 # shellcheck source=lib.sh
 source "${SCRIPT_DIR}/lib.sh"
 
-echo "=== Phase 3.5: Network Partition (docker network disconnect) ==="
+echo "=== Phase 3.5: ネットワーク分断（docker network disconnect） ==="
 
 primary="$(wait_for_primary)"
-echo "Current PRIMARY: ${primary}"
+echo "現在の PRIMARY: ${primary}"
 
 others=()
 for node in "${MONGO1}" "${MONGO2}" "${MONGO3}"; do
   [[ "${node}" == "${primary}" ]] && continue
   others+=("${node}")
 done
-echo "Other nodes: ${others[*]}"
+echo "その他のノード: ${others[*]}"
 
 echo ""
-echo "--- Disconnecting PRIMARY (${primary}) from ${MONGO_NETWORK} ---"
+echo "--- PRIMARY（${primary}）を ${MONGO_NETWORK} から切断 ---"
 demo_run docker network disconnect "${MONGO_NETWORK}" "${primary}"
 
-echo "Waiting for majority side to elect a new PRIMARY..."
+echo "多数派側が新しい PRIMARY を選出するまで待っています…"
 sleep 2
 
 new_primary=""
@@ -41,15 +41,15 @@ try { const m = rs.isMaster(); if (m.ismaster) print(m.me.split(":")[0]); else p
 done
 
 if [[ -z "${new_primary}" ]]; then
-  echo "ERROR: No new PRIMARY elected on majority side within timeout."
-  echo "Reconnecting ${primary} and aborting."
+  echo "ERROR: 制限時間内に多数派側で新しい PRIMARY が選出されませんでした。"
+  echo "${primary} を再接続して中止します。"
   docker network connect "${MONGO_NETWORK}" "${primary}"
   exit 1
 fi
-echo "New PRIMARY on majority side: ${new_primary}"
+echo "多数派側の新しい PRIMARY: ${new_primary}"
 
 echo ""
-echo "--- Verifying: majority side can accept writes ---"
+echo "--- 確認: 多数派側は書き込みを受け付ける ---"
 demo_mongosh "${new_primary}" "
 const dbn = db.getSiblingDB('${MONGO_DB}');
 try {
@@ -62,16 +62,16 @@ try {
 " "${MONGO_DB}"
 
 echo ""
-echo "--- Verifying: partitioned node (${primary}) has stepped down ---"
+echo "--- 確認: 分断されたノード（${primary}）は降格している ---"
 demo_mongosh "${primary}" '
 try { print(rs.isMaster().ismaster ? "still_primary" : "stepped_down"); } catch(e) { print("unreachable_or_error"); }
 ' "test"
 
 echo ""
-echo "--- Reconnecting ${primary} to ${MONGO_NETWORK} ---"
+echo "--- ${primary} を ${MONGO_NETWORK} に再接続 ---"
 demo_run docker network connect "${MONGO_NETWORK}" "${primary}"
 
-echo "Waiting for rejoined node to catch up..."
+echo "再参加したノードの追従を待っています…"
 sleep 8
 
 demo_mongosh "${primary}" '
@@ -89,10 +89,10 @@ print('partition_test docs=' + dbn.${MONGO_COLL}.countDocuments({ tag: 'partitio
 " "${MONGO_DB}"
 
 echo ""
-echo "=== Phase 3.5 Summary ==="
-echo "1. PRIMARY was isolated via network disconnect (node alive, network unreachable)"
-echo "2. Majority elected new PRIMARY and accepted writes (CAP: A-side)"
-echo "3. Partitioned node stepped down (minority loses PRIMARY)"
-echo "4. After reconnect, former PRIMARY rejoined and caught up via oplog"
+echo "=== Phase 3.5 まとめ ==="
+echo "1. PRIMARY をネットワーク切断で隔離した（プロセスは生きているが到達不能）"
+echo "2. 多数派が新しい PRIMARY を選出し、書き込みを受け付けた（CAP: A 側）"
+echo "3. 分断されたノードは降格した（少数派は PRIMARY を失う）"
+echo "4. 再接続後、旧 PRIMARY は再参加し oplog で追いついた"
 echo ""
-echo "Phase 3.5 complete."
+echo "Phase 3.5 完了。"

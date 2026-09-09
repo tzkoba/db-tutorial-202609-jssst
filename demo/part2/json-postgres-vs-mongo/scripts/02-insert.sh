@@ -61,4 +61,4 @@ cat <<'EOF'
 | 索引 | GIN on jsonb / 生成列の B-tree など | フィールドパスへ createIndex |
 EOF
 
-echo "Phase 2 complete."
+echo "Phase 2 完了。"

@@ -54,7 +54,7 @@ wait_for_ysql() {
     fi
     sleep 2
   done
-  echo "Timed out waiting for YSQL on ${node}" >&2
+  echo "${node} 上の YSQL 待ちがタイムアウトしました" >&2
   return 1
 }
 
@@ -71,7 +71,7 @@ wait_for_cluster_ready() {
     fi
     sleep 2
   done
-  echo "Timed out waiting for 3 servers in yb_servers()" >&2
+  echo "yb_servers() で 3 台揃う待ちがタイムアウトしました" >&2
   return 1
 }
 
@@ -141,7 +141,7 @@ find_tablet_leader_container() {
 assert_sql_ident() {
   local name="$1"
   if [[ ! "${name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-    echo "not a SQL identifier: ${name}" >&2
+    echo "SQL 識別子ではありません: ${name}" >&2
     return 1
   fi
 }
@@ -177,7 +177,7 @@ show_table_tablet_leaders() {
   assert_sql_ident "${t1}" && assert_sql_ident "${t2}" || return 1
 
   echo ""
-  echo "--- Each table has its own tablet (not colocated) ---"
+  echo "--- 各テーブルは自分の tablet を持つ（非 colocate） ---"
   demo_ysql "${ep}" "
 SELECT c.relname AS table_name,
        (yb_table_properties(c.oid)).num_tablets,
@@ -192,7 +192,7 @@ ORDER BY c.relname;
   meta="$(ysql_q "${ep}" "SELECT count(*) FROM yb_tablet_metadata WHERE relname IN ('${t1}', '${t2}')" || true)"
   if [[ "${meta}" =~ ^[0-9]+$ ]]; then
     echo ""
-    echo "--- Tablet Leaders (yb_tablet_metadata) ---"
+    echo "--- tablet Leader（yb_tablet_metadata） ---"
     demo_ysql "${ep}" "
 SELECT ytm.relname AS table_name,
        ytm.tablet_id,
@@ -206,7 +206,7 @@ ORDER BY ytm.relname, ytm.tablet_id;
   fi
 
   echo ""
-  echo "--- Tablets on each node (yb_local_tablets; replicas of both tables) ---"
+  echo "--- 各ノード上の tablet（yb_local_tablets、両テーブルのレプリカ） ---"
   for node in $(yb_nodes); do
     if ! docker ps --format '{{.Names}}' | grep -qx "${node}"; then
       continue
@@ -225,7 +225,7 @@ ORDER BY table_name, tablet_id;
   l1="$(find_tablet_leader_container "${t1}")"
   l2="$(find_tablet_leader_container "${t2}")"
   echo ""
-  echo "--- Resolved tablet Leader per table ---"
+  echo "--- テーブルごとの解決済み tablet Leader ---"
   demo_ysql "${ep}" "
 SELECT table_name, tablet_id, leader_node
 FROM (VALUES
@@ -252,7 +252,7 @@ wait_for_writable_endpoint() {
     done
     sleep 2
   done
-  echo "Timed out waiting for a writable YSQL endpoint" >&2
+  echo "書き込み可能な YSQL エンドポイント待ちがタイムアウトしました" >&2
   return 1
 }
 
@@ -310,7 +310,7 @@ run_insert_clients() {
     ) > "${RUN_DIR}/clients/client-${i}.log" 2>&1 &
   done
 
-  echo "Started ${client_count} INSERT clients (tag=${tag_prefix}, duration=${duration_sec}s)"
+  echo "INSERT クライアント ${client_count} 台を起動しました（tag=${tag_prefix}、duration=${duration_sec}s）"
 }
 
 wait_clients() {

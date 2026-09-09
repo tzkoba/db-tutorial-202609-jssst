@@ -7,7 +7,7 @@ source "${SCRIPT_DIR}/common.env"
 # shellcheck source=lib.sh
 source "${SCRIPT_DIR}/lib.sh"
 
-echo "=== Phase 5 (optional): Multi-tablet transaction + one tablet Leader kill ==="
+echo "=== Phase 5（任意）: 複数 tablet トランザクション + tablet Leader 1 台を kill ==="
 
 T1="${YB_TXN_T1}"
 T2="${YB_TXN_T2}"
@@ -19,7 +19,7 @@ restart_stopped_nodes() {
   for n in $(yb_nodes); do
     if docker ps -a --format '{{.Names}}' | grep -qx "${n}"; then
       if ! docker ps --format '{{.Names}}' | grep -qx "${n}"; then
-        echo "Restarting stopped node ${n}..."
+        echo "停止中のノード ${n} を再起動しています…"
         docker start "${n}" >/dev/null
       fi
     fi
@@ -33,13 +33,13 @@ restart_stopped_nodes() {
         ready=$((ready + 1))
       fi
     done
-    echo "YSQL-ready nodes: ${ready}/3"
+    echo "YSQL 準備完了ノード: ${ready}/3"
     if [[ "${ready}" -ge 2 ]]; then
       return 0
     fi
     sleep 2
   done
-  echo "WARNING: fewer than 2 nodes became YSQL-ready; continuing best-effort."
+  echo "WARNING: YSQL 準備完了が 2 ノード未満です。best-effort で続行します。"
 }
 
 healthy_nodes() {
@@ -56,17 +56,17 @@ healthy_nodes() {
 restart_stopped_nodes
 
 mapfile -t healthy < <(healthy_nodes)
-echo "Healthy nodes: ${healthy[*]:-none}"
+echo "健全なノード: ${healthy[*]:-none}"
 if [[ "${#healthy[@]}" -lt 2 ]]; then
-  echo "ERROR: Need at least 2 healthy nodes for Phase 5. Re-run 01-start-cluster.sh."
+  echo "ERROR: Phase 5 には健全なノードが 2 台以上必要です。01-start-cluster.sh からやり直してください。"
   exit 1
 fi
 
 ep="$(wait_for_writable_endpoint)"
-echo "Using endpoint: ${ep}"
+echo "使うエンドポイント: ${ep}"
 
 echo ""
-echo "--- Creating two non-colocated tables (1 tablet each) ---"
+echo "--- 非 colocate のテーブルを 2 つ作成（各 1 tablet） ---"
 demo_ysql "${ep}" <<SQL
 DROP TABLE IF EXISTS ${T2};
 DROP TABLE IF EXISTS ${T1};
@@ -84,20 +84,20 @@ CREATE TABLE ${T2} (
 SPLIT INTO 1 TABLETS;
 SQL
 
-echo "Waiting for tablets to appear..."
+echo "tablet が現れるまで待っています…"
 sleep 4
 show_table_tablet_leaders "${ep}" "${T1}" "${T2}"
 
 leader1="$(find_tablet_leader_container "${T1}")"
 leader2="$(find_tablet_leader_container "${T2}")"
-echo "Tablet Leader ${T1}: ${leader1}"
-echo "Tablet Leader ${T2}: ${leader2}"
+echo "tablet Leader ${T1}: ${leader1}"
+echo "tablet Leader ${T2}: ${leader2}"
 
 # Same node is fine: each table still has its own tablet/Leader. Killing that
 # node takes down both Raft leaders at once; they re-elect independently.
 kill_target="${leader2}"
 if [[ "${leader1}" == "${leader2}" ]]; then
-  echo "NOTE: both tablet Leaders are on ${kill_target}. Killing it drops both groups; they re-elect separately."
+  echo "NOTE: 両方の tablet Leader が ${kill_target} 上にあります。kill すると両グループが落ち、それぞれ再選出します。"
 fi
 
 # Talk to a node that is not the tablet Leader we will kill, so the session
@@ -110,14 +110,14 @@ if [[ "${ep}" == "${kill_target}" ]]; then
     fi
   done
 fi
-echo "Endpoint for open transaction: ${ep}"
-echo "Tablet Leader to kill (${T2}): ${kill_target}"
+echo "開いているトランザクション用のエンドポイント: ${ep}"
+echo "kill する tablet Leader（${T2}）: ${kill_target}"
 
 echo ""
-echo "--- A) Open cross-tablet txn + kill a tablet-Leader node (expect abort, no partial rows) ---"
+echo "--- A) 複数 tablet にまたがる未 COMMIT の txn + tablet-Leader ノードを kill（中止、部分行なしを想定） ---"
 before1="$(count_named_table "${ep}" "${T1}" "tag = 'txn_open'")"
 before2="$(count_named_table "${ep}" "${T2}" "tag = 'txn_open'")"
-echo "Rows before: ${T1}=${before1} ${T2}=${before2}"
+echo "開始前の行数: ${T1}=${before1} ${T2}=${before2}"
 
 echo
 echo "# ${ep}"
@@ -139,16 +139,16 @@ SQL
 txn_pid=$!
 
 sleep 2
-echo "Killing tablet-Leader node ${kill_target} during open transaction..."
+echo "開いているトランザクション中に tablet-Leader ノード ${kill_target} を kill しています…"
 if docker ps --format '{{.Names}}' | grep -qx "${kill_target}"; then
   demo_run docker kill -s KILL "${kill_target}" || true
 fi
 
 wait "${txn_pid}" || true
-echo "Open-txn client log (tail):"
+echo "未 COMMIT txn のクライアントログ（末尾）:"
 tail -n 20 "${RUN_DIR}/txn-open.log" || true
 
-echo "Restarting ${kill_target} before committed-txn check..."
+echo "COMMIT 済み txn の確認前に ${kill_target} を再起動しています…"
 demo_run docker start "${kill_target}" || true
 restart_stopped_nodes
 
@@ -156,7 +156,7 @@ ep2="$(wait_for_writable_endpoint)"
 after1="$(count_named_table "${ep2}" "${T1}" "tag = 'txn_open'")"
 after2="$(count_named_table "${ep2}" "${T2}" "tag = 'txn_open'")"
 echo ""
-echo "--- Counts after interrupted cross-tablet txn ---"
+echo "--- 中断した複数 tablet txn の後の件数 ---"
 demo_ysql "${ep2}" "
 SELECT '${T1}' AS table_name, count(*) FROM ${T1} WHERE tag = 'txn_open'
 UNION ALL
@@ -164,28 +164,28 @@ SELECT '${T2}', count(*) FROM ${T2} WHERE tag = 'txn_open';
 "
 
 if [[ "${after1}" == "${before1}" && "${after2}" == "${before2}" ]]; then
-  echo "OK: Uncommitted cross-tablet work did not become durable on either table."
+  echo "OK: 未 COMMIT の複数 tablet 作業は、どちらのテーブルにも残らなかった。"
 elif [[ "${after1}" != "${before1}" && "${after2}" == "${before2}" ]] \
   || [[ "${after1}" == "${before1}" && "${after2}" != "${before2}" ]]; then
-  echo "UNEXPECTED: partial rows on one table only (${T1} ${before1}->${after1}, ${T2} ${before2}->${after2})."
+  echo "UNEXPECTED: 片方のテーブルにだけ部分行が出た（${T1} ${before1}->${after1}, ${T2} ${before2}->${after2}）。"
   exit 1
 else
-  echo "NOTE: Both tables changed (${T1} ${before1}->${after1}, ${T2} ${before2}->${after2}). COMMIT may have finished before kill."
+  echo "NOTE: 両方のテーブルが変わった（${T1} ${before1}->${after1}, ${T2} ${before2}->${after2}）。kill 前に COMMIT が終わった可能性。"
 fi
 
 echo ""
-echo "--- B) COMMIT cross-tablet txn, then kill one tablet Leader (both tables keep the rows) ---"
+echo "--- B) 複数 tablet txn を COMMIT してから tablet Leader 1 台を kill（両テーブルに行が残る） ---"
 restart_stopped_nodes
 mapfile -t healthy_b < <(healthy_nodes)
 if [[ "${#healthy_b[@]}" -lt 3 ]]; then
-  echo "NOTE: Only ${#healthy_b[@]}/3 healthy; attempting container restarts once more..."
+  echo "NOTE: 健全なのは ${#healthy_b[@]}/3 台。コンテナ再起動をもう一度試します…"
   for n in $(yb_nodes); do docker restart "${n}" >/dev/null 2>&1 || docker start "${n}" >/dev/null 2>&1 || true; done
   sleep 20
   restart_stopped_nodes
   mapfile -t healthy_b < <(healthy_nodes)
 fi
 if [[ "${#healthy_b[@]}" -lt 2 ]]; then
-  echo "ERROR: Need at least 2 healthy nodes for post-commit failover check."
+  echo "ERROR: COMMIT 後のフェイルオーバー確認には健全なノードが 2 台以上必要です。"
   exit 1
 fi
 
@@ -200,7 +200,7 @@ SQL
 
 c1="$(count_named_table "${ep3}" "${T1}" "tag = 'txn_committed'")"
 c2="$(count_named_table "${ep3}" "${T2}" "tag = 'txn_committed'")"
-echo "Committed counts before kill: ${T1}=${c1} ${T2}=${c2}"
+echo "kill 前の COMMIT 済み件数: ${T1}=${c1} ${T2}=${c2}"
 demo_ysql "${ep3}" "
 SELECT '${T1}' AS table_name, count(*) FROM ${T1} WHERE tag = 'txn_committed'
 UNION ALL
@@ -212,20 +212,20 @@ if ! printf '%s\n' "${healthy_b[@]}" | grep -qx "${kill2}"; then
   kill2="${healthy_b[-1]}"
 fi
 if [[ "${#healthy_b[@]}" -eq 2 ]]; then
-  echo "NOTE: Only 2 healthy nodes — post-commit kill leaves 1 survivor; RF=3 writes may pause until restart."
+  echo "NOTE: 健全なノードは 2 台だけ — COMMIT 後の kill では生存 1 台になり、RF=3 の書き込みは再起動まで止まることがある。"
 fi
 
 if [[ "$(find_tablet_leader_container "${T1}")" == "${kill2}" ]]; then
-  echo "NOTE: both tablet Leaders are on ${kill2}."
+  echo "NOTE: 両方の tablet Leader が ${kill2} 上にあります。"
 fi
-echo "Killing tablet-Leader node ${kill2} after COMMIT..."
+echo "COMMIT 後に tablet-Leader ノード ${kill2} を kill しています…"
 demo_run docker kill -s KILL "${kill2}" || true
 
 ep4=""
 if ep4="$(wait_for_writable_endpoint)"; then
   :
 else
-  echo "NOTE: Survivors not writable yet (likely RF majority). Restarting ${kill2} to verify durability..."
+  echo "NOTE: 生存ノードがまだ書き込み不能（RF 多数派の可能性）。耐久性確認のため ${kill2} を再起動します…"
   demo_run docker start "${kill2}" || true
   restart_stopped_nodes
   ep4="$(wait_for_writable_endpoint)"
@@ -234,7 +234,7 @@ fi
 a1="$(count_named_table "${ep4}" "${T1}" "tag = 'txn_committed'")"
 a2="$(count_named_table "${ep4}" "${T2}" "tag = 'txn_committed'")"
 echo ""
-echo "--- Counts after killing one tablet Leader ---"
+echo "--- tablet Leader 1 台を kill した後の件数 ---"
 demo_ysql "${ep4}" "
 SELECT '${T1}' AS table_name, count(*) FROM ${T1} WHERE tag = 'txn_committed'
 UNION ALL
@@ -242,18 +242,18 @@ SELECT '${T2}', count(*) FROM ${T2} WHERE tag = 'txn_committed';
 "
 
 if [[ "${a1}" == "${c1}" && "${a2}" == "${c2}" && "${c1}" -ge 1 && "${c2}" -ge 1 ]]; then
-  echo "SUCCESS: COMMITTED cross-tablet transaction survived tablet-Leader-node kill (both tables)."
+  echo "SUCCESS: COMMIT 済みの複数 tablet トランザクションは tablet-Leader ノード kill 後も両テーブルに残った。"
 else
-  echo "UNEXPECTED: committed counts mismatch (${T1} ${c1}->${a1}, ${T2} ${c2}->${a2})"
+  echo "UNEXPECTED: COMMIT 済み件数が一致しない（${T1} ${c1}->${a1}, ${T2} ${c2}->${a2}）"
   exit 1
 fi
 
-echo "Restarting ${kill2} so the final Leader map can include all three nodes..."
+echo "最終的な Leader マップに 3 ノード全部を含めるため ${kill2} を再起動しています…"
 demo_run docker start "${kill2}" || true
 restart_stopped_nodes
 ep5="$(wait_for_writable_endpoint)"
 echo ""
-echo "--- Tablet Leaders after failover (roles move; each table re-elects) ---"
+echo "--- フェイルオーバー後の tablet Leader（役割は移る、各テーブルが再選出） ---"
 show_table_tablet_leaders "${ep5}" "${T1}" "${T2}"
 
-echo "Phase 5 complete."
+echo "Phase 5 完了。"

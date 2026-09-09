@@ -12,11 +12,11 @@ source "${SCRIPT_DIR}/../../demo-lib.sh"
 "${SCRIPT_DIR}/00-preflight.sh"
 
 if docker ps -a --format '{{.Names}}' | grep -qx "${PG_CONTAINER}"; then
-  echo "Container ${PG_CONTAINER} already exists. Run cleanup.sh first."
+  echo "コンテナ ${PG_CONTAINER} は既に存在します。先に cleanup.sh を実行してください。"
   exit 1
 fi
 
-echo "Starting ${PG_CONTAINER} with archive and backup mounts..."
+echo "アーカイブとバックアップのマウント付きで ${PG_CONTAINER} を起動しています…"
 demo_run docker run -d --name "${PG_CONTAINER}" \
   -e POSTGRES_PASSWORD="${PG_SUPERUSER_PASSWORD}" \
   -p "${PG_PORT}:5432" \
@@ -25,11 +25,11 @@ demo_run docker run -d --name "${PG_CONTAINER}" \
   -v "${PG_BACKUP_VOLUME}:/backup" \
   "${PG_IMAGE}"
 
-echo "Waiting for PostgreSQL..."
+echo "PostgreSQL の起動を待っています…"
 wait_for_postgres "${PG_CONTAINER}"
 chown_extra_mounts
 
-echo "Enabling WAL archiving (required for PITR later)..."
+echo "WAL アーカイブを有効にしています（後の PITR で必要）…"
 demo_psql "${PG_CONTAINER}" <<'SQL'
 ALTER SYSTEM SET wal_level TO 'replica';
 ALTER SYSTEM SET archive_mode TO 'on';
@@ -39,7 +39,7 @@ SQL
 demo_run docker restart "${PG_CONTAINER}"
 wait_for_postgres "${PG_CONTAINER}"
 
-echo "Creating demo table..."
+echo "デモ用テーブルを作成しています…"
 demo_psql "${PG_CONTAINER}" <<'SQL'
 CREATE TABLE IF NOT EXISTS demo_items (
   id serial PRIMARY KEY,
@@ -55,4 +55,4 @@ demo_psql "${PG_CONTAINER}" "SHOW archive_mode;"
 demo_psql "${PG_CONTAINER}" "SHOW wal_level;"
 demo_psql "${PG_CONTAINER}" "SELECT * FROM demo_items ORDER BY id;"
 
-echo "Phase 1 complete."
+echo "Phase 1 完了。"

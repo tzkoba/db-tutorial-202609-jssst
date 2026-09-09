@@ -8,22 +8,22 @@ source "${SCRIPT_DIR}/common.env"
 source "${SCRIPT_DIR}/../../demo-lib.sh"
 
 if ! docker ps --format '{{.Names}}' | grep -qx "${PG_CONTAINER}"; then
-  echo "Container ${PG_CONTAINER} is not running."
+  echo "コンテナ ${PG_CONTAINER} が動いていません。"
   exit 1
 fi
 
-echo "Taking base backup into /backup..."
+echo "/backup にベースバックアップを取得しています…"
 docker exec "${PG_CONTAINER}" bash -c \
   'chown postgres:postgres /backup && rm -rf /backup/*'
 demo_run docker exec -u postgres "${PG_CONTAINER}" pg_basebackup \
   -U "${PG_SUPERUSER}" -D /backup -Fp -Xs -P
 
-echo "Inserting rows before simulated mistake..."
+echo "誤操作の前に行を INSERT しています…"
 demo_psql "${PG_CONTAINER}" "INSERT INTO demo_items (name) VALUES ('before_mistake_1');"
 sleep 2
 demo_psql "${PG_CONTAINER}" "INSERT INTO demo_items (name) VALUES ('before_mistake_2');"
 
-echo "Recording recovery target time:"
+echo "リカバリ目標時刻を記録しています:"
 demo_psql "${PG_CONTAINER}" "SELECT clock_timestamp();"
 RECOVERY_TARGET="$(docker exec "${PG_CONTAINER}" psql -U "${PG_SUPERUSER}" -d postgres -Atqc \
   "SELECT clock_timestamp();")"
@@ -31,4 +31,4 @@ echo "${RECOVERY_TARGET}" > "${SCRIPT_DIR}/.recovery_target_time"
 
 demo_psql "${PG_CONTAINER}" "SELECT pg_switch_wal();"
 
-echo "Phase 5 complete."
+echo "Phase 5 完了。"

@@ -35,7 +35,7 @@ demo_run() {
 demo_fail_if_exited() {
   local name="$1"
   if ! docker ps --format '{{.Names}}' | grep -qx "${name}"; then
-    echo "Container ${name} is not running. Logs:" >&2
+    echo "コンテナ ${name} が動いていません。ログ:" >&2
     docker logs "${name}" >&2 || true
     return 1
   fi
@@ -217,15 +217,15 @@ demo_mongosh_count_by_oid() {
   local lib_dir params
   lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   if [[ ! "${oid}" =~ ^[0-9a-fA-F]{24}$ ]]; then
-    echo "not a 24-char hex ObjectId: ${oid}" >&2
+    echo "24 文字 hex の ObjectId ではありません: ${oid}" >&2
     return 1
   fi
   if [[ ! "${db_name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || ! "${coll}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-    echo "db/coll must be identifiers: ${db_name}.${coll}" >&2
+    echo "db/coll は識別子である必要があります: ${db_name}.${coll}" >&2
     return 1
   fi
   if [[ -n "${read_concern}" && ! "${read_concern}" =~ ^(local|majority|available|linearizable)$ ]]; then
-    echo "unsupported readConcern: ${read_concern}" >&2
+    echo "未対応の readConcern: ${read_concern}" >&2
     return 1
   fi
   params="$(mktemp)"
@@ -253,11 +253,11 @@ demo_mongosh_scan_acked_ids() {
   local lib_dir params oids_json first hex
   lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   if [[ ! "${db_name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || ! "${coll}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-    echo "db/coll must be identifiers: ${db_name}.${coll}" >&2
+    echo "db/coll は識別子である必要があります: ${db_name}.${coll}" >&2
     return 1
   fi
   if [[ -n "${read_concern}" && ! "${read_concern}" =~ ^(local|majority|available|linearizable)$ ]]; then
-    echo "unsupported readConcern: ${read_concern}" >&2
+    echo "未対応の readConcern: ${read_concern}" >&2
     return 1
   fi
   oids_json="["

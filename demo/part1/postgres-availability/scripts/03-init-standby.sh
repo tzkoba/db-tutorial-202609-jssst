@@ -8,16 +8,16 @@ source "${SCRIPT_DIR}/common.env"
 source "${SCRIPT_DIR}/../../demo-lib.sh"
 
 if ! docker ps --format '{{.Names}}' | grep -qx "${PG_PRIMARY}"; then
-  echo "Primary container ${PG_PRIMARY} is not running. Run 01-start-primary.sh first."
+  echo "primary コンテナ ${PG_PRIMARY} が動いていません。先に 01-start-primary.sh を実行してください。"
   exit 1
 fi
 
 if docker ps -a --format '{{.Names}}' | grep -qx "${PG_STANDBY}"; then
-  echo "Standby container ${PG_STANDBY} already exists. Run cleanup.sh first."
+  echo "standby コンテナ ${PG_STANDBY} は既に存在します。先に cleanup.sh を実行してください。"
   exit 1
 fi
 
-echo "Running pg_basebackup into volume ${PG_STANDBY_VOLUME}..."
+echo "ボリューム ${PG_STANDBY_VOLUME} へ pg_basebackup を実行しています…"
 # Bypass the image entrypoint (it only gosu's for CMD postgres). pg_basebackup
 # then runs as root and creates $PG_VOLUME_MOUNT/18 as mode 0700, so the later
 # postgres uid cannot mkdir/traverse it. chown the whole mount afterwards.
@@ -41,7 +41,7 @@ demo_run docker run --rm --network "${PG_NETWORK}" \
       chmod 0755 "$PGVOL" "$PGVOL/18"
       chmod 0700 "$PGDATADIR"'
 
-echo "Verifying standby.signal and primary_conninfo were created..."
+echo "standby.signal と primary_conninfo が作成されたことを確認しています…"
 docker run --rm \
   -e PGDATADIR="${PG_DATA_DIR}" \
   -v "${PG_STANDBY_VOLUME}:${PG_VOLUME_MOUNT}" \
@@ -49,4 +49,4 @@ docker run --rm \
   "${PG_IMAGE}" \
   -c 'test -f "$PGDATADIR/standby.signal" && grep -q primary_conninfo "$PGDATADIR/postgresql.auto.conf"'
 
-echo "Phase 3 complete."
+echo "Phase 3 完了。"

@@ -7,9 +7,9 @@ source "${SCRIPT_DIR}/common.env"
 # shellcheck source=lib.sh
 source "${SCRIPT_DIR}/lib.sh"
 
-section "Cleanup: stop/remove containers and network"
+section "クリーンアップ: コンテナとネットワークを停止／削除"
 
 docker rm -f "${PG_CONTAINER}" "${MONGO_CONTAINER}" 2>/dev/null || true
 docker network rm "${DEMO_NETWORK}" 2>/dev/null || true
 
-echo "Cleanup complete."
+echo "クリーンアップ完了。"

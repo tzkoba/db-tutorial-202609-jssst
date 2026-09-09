@@ -7,18 +7,18 @@ source "${SCRIPT_DIR}/common.env"
 # shellcheck source=lib.sh
 source "${SCRIPT_DIR}/lib.sh"
 
-section "Phase 0: Preflight"
+section "Phase 0: 事前確認"
 
-echo "Checking Docker..."
+echo "Docker を確認しています…"
 docker version >/dev/null
 
 if [[ ! -f "${DATA_FILE}" ]]; then
-  echo "Missing sample data: ${DATA_FILE}" >&2
+  echo "サンプルデータがありません: ${DATA_FILE}" >&2
   exit 1
 fi
 
-echo "Creating network ${DEMO_NETWORK} (if missing)..."
+echo "ネットワーク ${DEMO_NETWORK} を作成しています（無い場合のみ）…"
 docker network create "${DEMO_NETWORK}" 2>/dev/null || true
 
-echo "Sample JSON: ${DATA_FILE}"
-echo "Preflight complete."
+echo "サンプル JSON: ${DATA_FILE}"
+echo "事前確認完了。"

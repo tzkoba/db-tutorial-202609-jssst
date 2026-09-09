@@ -12,21 +12,21 @@ MISSING_FILE="${RUN_DIR}/missing-failover.txt"
 : > "${SUCCESS_FILE}"
 : > "${MISSING_FILE}"
 
-echo "=== Phase 4: Concurrent INSERT + tserver Leader kill (committed rows must remain) ==="
+echo "=== Phase 4: 並行 INSERT + tserver Leader を kill（COMMIT 済み行は残る想定） ==="
 
 # Idempotent. After a previous SIGKILL, bring all three nodes back before re-running.
 for name in $(yb_nodes); do
   if ! docker ps -a --format '{{.Names}}' | grep -qx "${name}"; then
-    echo "Missing container ${name}. Re-run from 01-start-cluster.sh."
+    echo "コンテナ ${name} が見つかりません。01-start-cluster.sh からやり直してください。"
     exit 1
   fi
 done
 demo_run docker start "${YB1}" "${YB2}" "${YB3}"
 
-echo "Waiting for a writable endpoint..."
+echo "書き込み可能なエンドポイントを待っています…"
 sample_ep="$(wait_for_writable_endpoint)"
 leader="$(find_tablet_leader_container)"
-echo "Tablet Leader to kill: ${leader}"
+echo "kill する tablet Leader: ${leader}"
 
 demo_ysql "${sample_ep}" \
   "INSERT INTO ${YB_TABLE}(tag, client_id, n) VALUES ('failover', 0, 0) RETURNING id;"
@@ -34,18 +34,18 @@ demo_ysql "${sample_ep}" \
 run_insert_clients "${SUCCESS_FILE}" 3 25 "failover"
 sleep 4
 
-echo "Killing Leader container ${leader} with SIGKILL..."
+echo "Leader コンテナ ${leader} を SIGKILL で止めます…"
 demo_run docker kill -s KILL "${leader}"
 
-echo "Waiting for clients to finish..."
+echo "クライアントの終了を待っています…"
 wait_clients
 
-echo "Waiting for a writable endpoint on surviving nodes..."
+echo "生存ノード上で書き込み可能なエンドポイントを待っています…"
 new_ep="$(wait_for_writable_endpoint)"
-echo "Writable endpoint: ${new_ep}"
+echo "書き込み可能なエンドポイント: ${new_ep}"
 
 success_count="$(grep -cve '^$' "${SUCCESS_FILE}" || true)"
-echo "Client-acked (COMMIT returned) inserts: ${success_count}"
+echo "ACKED（COMMIT が返った insert）: ${success_count}"
 
 missing=0
 found=0
@@ -65,20 +65,20 @@ while IFS= read -r id; do
   fi
 done < "${SUCCESS_FILE}"
 
-echo "Found after failover: ${found}"
-echo "Missing (COMMIT returned but row gone): ${missing}"
+echo "FOUND（フェイルオーバー後）: ${found}"
+echo "MISSING（COMMIT は返ったが行が無い）: ${missing}"
 if [[ -n "${sample_found}" ]]; then
   show_one_id_check "${new_ep}" "${sample_found}"
 fi
 
 if [[ "${missing}" -eq 0 && "${success_count}" -gt 0 ]]; then
-  echo "SUCCESS: All client-acked commits survived Leader kill (Raft majority commit)."
+  echo "SUCCESS: クライアントが ACK した COMMIT はすべて Leader kill 後も残った（Raft majority commit）。"
 elif [[ "${success_count}" -eq 0 ]]; then
-  echo "WARNING: No successful commits recorded (cluster may have been unavailable). Re-run Phase 4."
+  echo "WARNING: 成功した COMMIT が記録されていません（クラスタが利用不能だった可能性）。Phase 4 を再実行してください。"
   exit 1
 else
-  echo "UNEXPECTED: Some acked commits missing. Inspect ${MISSING_FILE}"
+  echo "UNEXPECTED: acked な COMMIT の一部が MISSING です。${MISSING_FILE} を確認してください"
   exit 1
 fi
 
-echo "Phase 4 complete."
+echo "Phase 4 完了。"

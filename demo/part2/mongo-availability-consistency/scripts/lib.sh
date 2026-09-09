@@ -36,7 +36,7 @@ wait_for_primary() {
     fi
     sleep 1
   done
-  echo "Timed out waiting for PRIMARY" >&2
+  echo "PRIMARY 待ちがタイムアウトしました" >&2
   return 1
 }
 
@@ -53,7 +53,7 @@ wait_for_secondary_member() {
     fi
     sleep 1
   done
-  echo "Timed out waiting for a SECONDARY next to ${container}" >&2
+  echo "${container} の横に SECONDARY が出る待ちがタイムアウトしました" >&2
   return 1
 }
 
@@ -143,7 +143,7 @@ printjson(db.${MONGO_COLL}.insertOne(
     ) > "${RUN_DIR}/clients/client-${i}.log" 2>&1 &
   done
 
-  echo "Started ${client_count} clients (one mongosh loop per docker exec; ~${duration_sec}s; per-insert output omitted)"
+  echo "クライアント ${client_count} 台を起動しました（docker exec あたり 1 つの mongosh ループ、約 ${duration_sec} 秒、insert ごとの出力は省略）"
 }
 
 # Hidden _id presence check (no lecture prompt). Uses static --file script + JSON params.
@@ -165,7 +165,7 @@ show_one_id_check() {
   local js
   oid="$(extract_oid_hex "${oid}")"
   if [[ ! "${oid}" =~ ^[0-9a-fA-F]{24}$ ]]; then
-    echo "No 24-char hex _id to show (insert client output was not an ObjectId)." >&2
+    echo "表示できる 24 文字 hex の _id がありません（insert クライアントの出力が ObjectId ではありませんでした）。" >&2
     return 0
   fi
   echo
@@ -243,7 +243,7 @@ run_acked_id_scan_survivors() {
     fi
   done < <(running_mongo_nodes)
   if [[ "${first}" -eq 1 ]]; then
-    echo "No running replica members to scan." >&2
+    echo "走査できる稼働中の Replica Set メンバがありません。" >&2
     rm -rf "${tmp}"
     return 1
   fi

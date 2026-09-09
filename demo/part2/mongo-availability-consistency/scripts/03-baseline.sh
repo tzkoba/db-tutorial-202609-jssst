@@ -7,7 +7,7 @@ source "${SCRIPT_DIR}/common.env"
 # shellcheck source=../../../demo-lib.sh
 source "${SCRIPT_DIR}/../../../demo-lib.sh"
 
-echo "Baseline insert with w:majority (no failure)..."
+echo "障害なしのベースライン insert（w:majority）…"
 demo_mongosh "${MONGO1}" "
 const dbn = db.getSiblingDB('${MONGO_DB}');
 const res = dbn.${MONGO_COLL}.insertOne(
@@ -18,4 +18,4 @@ print('inserted=' + res.insertedId);
 print('count=' + dbn.${MONGO_COLL}.countDocuments({ tag: 'baseline' }));
 " "${MONGO_DB}"
 
-echo "Phase 3 complete."
+echo "Phase 3 完了。"

@@ -7,7 +7,7 @@ source "${SCRIPT_DIR}/common.env"
 # shellcheck source=lib.sh
 source "${SCRIPT_DIR}/lib.sh"
 
-echo "Checking Docker..."
+echo "Docker を確認しています…"
 docker version >/dev/null
 
 # Some containerized Docker hosts drop bridge ICC via bridge-nf + DOCKER DROP rules.
@@ -22,14 +22,14 @@ if [[ "${YB_FIX_BRIDGE_NF:-1}" == "1" ]]; then
 fi
 
 avail="$(available_mem_mb)"
-echo "Available memory: ${avail} MB (recommended >= ${YB_MIN_AVAIL_MB} MB for ~2GB×3 nodes)"
+echo "利用可能メモリ: ${avail} MB（目安: 約 2GB×3 ノードなら ${YB_MIN_AVAIL_MB} MB 以上）"
 if [[ "${avail}" -lt "${YB_MIN_AVAIL_MB}" ]]; then
-  echo "WARNING: Low free memory. YugabyteDB 3-node demos often need ~2GB RAM per node." >&2
-  echo "         Continue only if you accept OOM / slow startup risk." >&2
+  echo "WARNING: 空きメモリが少ないです。YugabyteDB 3 ノードデモはノードあたり約 2GB RAM が必要なことが多いです。" >&2
+  echo "         OOM や起動遅延を受け入れる場合のみ続行してください。" >&2
 fi
 
-echo "Creating network and run directory..."
+echo "ネットワークと実行ディレクトリを作成しています…"
 docker network create "${YB_NETWORK}" 2>/dev/null || true
 mkdir -p "${RUN_DIR}"
 
-echo "Preflight complete."
+echo "事前確認完了。"

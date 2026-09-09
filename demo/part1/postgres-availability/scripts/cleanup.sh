@@ -5,25 +5,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.env
 source "${SCRIPT_DIR}/common.env"
 
-echo "Stopping and removing containers..."
+echo "コンテナを停止して削除しています…"
 docker rm -f "${PG_STANDBY}" 2>/dev/null || true
 docker rm -f "${PG_PRIMARY}" 2>/dev/null || true
 
-read -r -p "Remove volumes ${PG_PRIMARY_VOLUME} and ${PG_STANDBY_VOLUME}? [y/N] " answer
+read -r -p "ボリューム ${PG_PRIMARY_VOLUME} と ${PG_STANDBY_VOLUME} を削除しますか？ [y/N] " answer
 if [[ "${answer}" =~ ^[Yy]$ ]]; then
   docker volume rm "${PG_PRIMARY_VOLUME}" 2>/dev/null || true
   docker volume rm "${PG_STANDBY_VOLUME}" 2>/dev/null || true
-  echo "Volumes removed."
+  echo "ボリュームを削除しました。"
 else
-  echo "Volumes kept."
+  echo "ボリュームは残しました。"
 fi
 
-read -r -p "Remove network ${PG_NETWORK}? [y/N] " answer
+read -r -p "ネットワーク ${PG_NETWORK} を削除しますか？ [y/N] " answer
 if [[ "${answer}" =~ ^[Yy]$ ]]; then
   docker network rm "${PG_NETWORK}" 2>/dev/null || true
-  echo "Network removed."
+  echo "ネットワークを削除しました。"
 else
-  echo "Network kept."
+  echo "ネットワークは残しました。"
 fi
 
-echo "Cleanup complete."
+echo "クリーンアップ完了。"

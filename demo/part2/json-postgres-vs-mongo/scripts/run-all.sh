@@ -10,4 +10,4 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "${SCRIPT_DIR}/05-schema-flex.sh"
 
 echo
-echo "All phases finished. Run scripts/cleanup.sh when done."
+echo "全 Phase が終わりました。終わったら scripts/cleanup.sh を実行してください。"

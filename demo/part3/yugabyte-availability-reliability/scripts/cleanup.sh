@@ -14,7 +14,7 @@ remove_net=false
 if [[ "${FORCE:-}" == "1" || "${CI:-}" == "true" || "${YB_FORCE_CLEANUP:-}" == "1" ]]; then
   remove_net=true
 elif [[ -t 0 ]]; then
-  read -r -p "Remove network ${YB_NETWORK}? [y/N] " answer
+  read -r -p "ネットワーク ${YB_NETWORK} を削除しますか？ [y/N] " answer
   if [[ "${answer}" =~ ^[Yy]$ ]]; then
     remove_net=true
   fi
@@ -26,4 +26,4 @@ if [[ "${remove_net}" == "true" ]]; then
   docker network rm "${YB_NETWORK}" 2>/dev/null || true
 fi
 
-echo "Cleanup complete."
+echo "クリーンアップ完了。"

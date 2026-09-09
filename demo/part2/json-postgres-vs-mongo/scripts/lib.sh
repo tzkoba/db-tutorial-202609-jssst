@@ -32,7 +32,7 @@ require_containers() {
   local name
   for name in "${PG_CONTAINER}" "${MONGO_CONTAINER}"; do
     if ! docker ps --format '{{.Names}}' | grep -qx "${name}"; then
-      echo "Container ${name} is not running. Run 01-start.sh first." >&2
+      echo "コンテナ ${name} が動いていません。先に 01-start.sh を実行してください。" >&2
       exit 1
     fi
   done

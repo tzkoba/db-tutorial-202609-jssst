@@ -88,4 +88,4 @@ cat <<'EOF'
 | 書き味 | 「行の jsonb 列を関数で書き換える」 | 「ドキュメント内のパスを直接更新する」 |
 EOF
 
-echo "Phase 4 complete."
+echo "Phase 4 完了。"
