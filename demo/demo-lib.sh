@@ -106,7 +106,9 @@ demo_psql() {
     psql -U "${user}" -d "${db}" -v ON_ERROR_STOP=1
 }
 
-# Same display as demo_psql, but do not stop on SQL error (for expected failures).
+# Same display as demo_psql, but return the SQL status instead of aborting
+# the caller (for expected failures). stdin still needs ON_ERROR_STOP=1,
+# otherwise psql exits 0 after a failed statement.
 demo_psql_allow_fail() {
   local container="$1"
   local sql="${2:-}"
@@ -123,7 +125,7 @@ demo_psql_allow_fail() {
   demo_print_sql "${sql}"
   status=0
   printf '%s\n' "${sql}" | docker exec -i -e PGPASSWORD="${password}" "${container}" \
-    psql -U "${user}" -d "${db}" || status=$?
+    psql -U "${user}" -d "${db}" -v ON_ERROR_STOP=1 || status=$?
   return "${status}"
 }
 
@@ -148,7 +150,9 @@ demo_ysql() {
     bin/ysqlsh -h "${container}" -U "${user}" -d "${db}" -v ON_ERROR_STOP=1
 }
 
-# Same display as demo_ysql, but do not stop on SQL error (for expected failures).
+# Same display as demo_ysql, but return the SQL status instead of aborting
+# the caller (for expected failures). stdin still needs ON_ERROR_STOP=1,
+# otherwise ysqlsh exits 0 after a failed statement.
 demo_ysql_allow_fail() {
   local container="$1"
   local sql="${2:-}"
@@ -164,7 +168,7 @@ demo_ysql_allow_fail() {
   demo_print_sql "${sql}" "${db}"
   status=0
   printf '%s\n' "${sql}" | docker exec -i "${container}" \
-    bin/ysqlsh -h "${container}" -U "${user}" -d "${db}" || status=$?
+    bin/ysqlsh -h "${container}" -U "${user}" -d "${db}" -v ON_ERROR_STOP=1 || status=$?
   return "${status}"
 }
 
