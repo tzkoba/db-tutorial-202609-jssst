@@ -26,17 +26,33 @@ MongoDB は **PRIMARY + SECONDARY × 2** の 3 ノード replica set なので�
 cd demo/part2/mongo-availability-consistency
 ```
 
-ホスト側の待受は `27021` / `27022` / `27023`。コンテナ名は `mongo1` / `mongo2` / `mongo3`。
+ホスト側の待受は `27017` / `27018` / `27019`。コンテナ名は `mongo1` / `mongo2` / `mongo3`。
 replica set 名は `rs0`。
 
 ## 構成
 
-```text
-ホスト
-  :27021 ── mongo1  (PRIMARY または SECONDARY)
-  :27022 ── mongo2
-  :27023 ── mongo3
-        └── replica set rs0
+| 要素 | 値 |
+|------|-----|
+| Docker network | `mongo-demo-net` |
+| ノード | `mongo1` / `mongo2` / `mongo3`（コンテナ内は各 `27017`） |
+| ホストポート | `27017` / `27018` / `27019` |
+| MongoDB イメージ | `mongo:8` |
+| Replica set | `rs0`（PRIMARY 1 + SECONDARY 2。どのノードが PRIMARY でもよい） |
+| DB / コレクション | `demo.writes` |
+
+```mermaid
+flowchart LR
+  subgraph dockerNet [mongo-demo-net]
+    M1[mongo1:27017]
+    M2[mongo2:27017]
+    M3[mongo3:27017]
+  end
+  Host[Host]
+  Host -->|"localhost:27017"| M1
+  Host -->|"localhost:27018"| M2
+  Host -->|"localhost:27019"| M3
+  M1 -->|"oplog / rs0"| M2
+  M1 -->|"oplog / rs0"| M3
 ```
 
 ## 見せたいこと
@@ -275,4 +291,4 @@ Phase 4 と同様、起動時に 3 台を `docker start` してから書き込�
 - **ホスト名 `mongo1` が解決できない**: replica set の member はコンテナホスト名。クライアントは `docker exec` で各コンテナに入る。
 - **Phase 4 で Missing が 0**: `w: 1` でも複製が間に合うことがある。そのときは「運が良かった」と説明し、再実行するか件数を増やす。
 - **Phase 5 で Missing > 0**: 消えたのではなく、majority に入らなかった SECONDARY のレプリケーションラグ（＋選挙後の追従付け直し）で確定点がまだ古いことが多い。スクリプトは 10 秒後に同じ ACKED 集合を majority 読みし直す（1 回だけ）。それでも残ればその回は仕方なし。障害前ラグが必ず 10 秒以上だった、という意味ではない。Phase 4 の欠落とは別。
-- **ポート衝突**: 27021-27023 が空いていること。
+- **ポート衝突**: 27017-27019 が空いていること。
